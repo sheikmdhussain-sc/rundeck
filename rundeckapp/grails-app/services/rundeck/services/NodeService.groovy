@@ -119,7 +119,7 @@ class NodeService implements InitializingBean, ProjectConfigurable, IProjectNode
 
     @Override
     void afterPropertiesSet() throws Exception {
-        def spec = configurationService?.getCacheSpecFor('nodeService', 'nodeCache', DEFAULT_CACHE_SPEC)?:DEFAULT_CACHE_SPEC
+        def spec = configurationService?.getString('nodeService.nodeCache.spec', DEFAULT_CACHE_SPEC)?:DEFAULT_CACHE_SPEC
 
         log.debug("nodeCache: creating from spec: ${spec}")
 
@@ -158,7 +158,7 @@ class NodeService implements InitializingBean, ProjectConfigurable, IProjectNode
         Util.addCacheMetrics(this.class.name + ".nodeCache", registry, nodeCache)
     }
     boolean isCacheEnabled(IRundeckProjectConfig projectConfig){
-        def globalEnabled = configurationService.getCacheEnabledFor('nodeService','nodeCache', true)
+        def globalEnabled = configurationService.getBoolean('nodeService.nodeCache.enabled', true)
         return globalEnabled && projectNodeCacheEnabledConfig(projectConfig)
     }
 

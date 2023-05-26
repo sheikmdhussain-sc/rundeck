@@ -42,6 +42,12 @@ import spock.lang.Unroll
  */
 class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeService> {
     private static final String RESOURCE_TMP_DIR = '/tmp/rundeckNodeServiceSpec'
+    def setup(){
+
+        service.configurationService = Mock(ConfigurationService) {
+            getBoolean('nodeService.nodeCache.enabled', true) >> true
+        }
+    }
     def "get nodes project DNE"() {
         given:
         service.frameworkService = Mock(FrameworkService)
@@ -62,9 +68,6 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
     def "get nodes project exists"() {
         given:
         service.frameworkService = Mock(FrameworkService)
-        service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> true
-        }
         INodeSet nodeSet = new NodeSetImpl()
         nodeSet.putNode(new NodeEntryImpl('anode'))
         def properties = [
@@ -142,9 +145,6 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
     def "get nodes when project cache #isenabled"(String isenabled, int expectedCount) {
         given:
         service.frameworkService = Mock(FrameworkService)
-        service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> true
-        }
         INodeSet nodeSet = new NodeSetImpl()
         nodeSet.putNode(new NodeEntryImpl('anode'))
         def properties = [
@@ -223,7 +223,7 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
         service.nodeTaskExecutor = Mock(AsyncListenableTaskExecutor)
         service.frameworkService = Mock(FrameworkService)
         service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> true
+            getBoolean('nodeService.nodeCache.enabled', true) >> true
             getBoolean('nodeService.nodeCache.firstLoadAsynch', false) >> defFirstLoadAsynch
             0 * _(*_)
         }
@@ -298,7 +298,7 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
         service.nodeTaskExecutor = Mock(AsyncListenableTaskExecutor)
         service.frameworkService = Mock(FrameworkService)
         service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> true
+            getBoolean('nodeService.nodeCache.enabled', true) >> true
             getBoolean('nodeService.nodeCache.firstLoadAsynch', false) >> defAsynch
             0 * _(*_)
         }
@@ -386,7 +386,7 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
         service.nodeTaskExecutor = Mock(AsyncListenableTaskExecutor)
         service.frameworkService = Mock(FrameworkService)
         service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> true
+            getBoolean('nodeService.nodeCache.enabled', true) >> true
             getBoolean('nodeService.nodeCache.firstLoadAsynch', false) >> false
             0 * _(*_)
         }
@@ -466,7 +466,7 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
         service.nodeTaskExecutor = Mock(AsyncListenableTaskExecutor)
         service.frameworkService = Mock(FrameworkService)
         service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> true
+            getBoolean('nodeService.nodeCache.enabled', true) >> true
             getBoolean('nodeService.nodeCache.firstLoadAsynch', false) >> true
             0 * _(*_)
         }
@@ -578,7 +578,7 @@ class NodeServiceSpec extends Specification implements ServiceUnitTest<NodeServi
         def config = new PropsConfig(name: 'test1', properties: properties, projectProperties: properties)
 
         service.configurationService = Mock(ConfigurationService) {
-            getCacheEnabledFor('nodeService', 'nodeCache', true) >> globalconfval
+            getBoolean('nodeService.nodeCache.enabled', true) >> globalconfval
         }
 
         when:
