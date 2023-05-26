@@ -28,7 +28,6 @@ import com.dtolabs.rundeck.core.execution.logstorage.ExecutionFileLoader
 import com.dtolabs.rundeck.core.execution.logstorage.ExecutionFileLoaderService
 import com.dtolabs.rundeck.core.execution.logstorage.ExecutionFileState
 import com.dtolabs.rundeck.core.logging.*
-import com.dtolabs.rundeck.core.plugins.configuration.PropertyResolver
 import com.dtolabs.rundeck.core.plugins.configuration.PropertyResolverFactory
 import com.dtolabs.rundeck.core.plugins.configuration.PropertyScope
 import com.dtolabs.rundeck.plugins.logging.ExecutionFileStoragePlugin
@@ -36,6 +35,10 @@ import com.dtolabs.rundeck.server.plugins.services.ExecutionFileStoragePluginPro
 import grails.events.EventPublisher
 import grails.gorm.transactions.Transactional
 import org.hibernate.sql.JoinType
+import org.rundeck.app.config.ConfigService
+import org.rundeck.app.config.SysConfigProp
+import org.rundeck.app.config.SystemConfig
+import org.rundeck.app.config.SystemConfigurable
 import org.rundeck.app.services.ExecutionFile
 import org.rundeck.app.services.ExecutionFileProducer
 import org.hibernate.type.IntegerType
@@ -83,6 +86,7 @@ class LogFileStorageService
                 EventPublisher,
                 ExecutionFileLoaderService,
                 AsyncExecutionFileLoaderService,
+                SystemConfigurable,
                 ApplicationListener<ContextClosedEvent> {
 
     static final RundeckLogFormat rundeckLogFormat = new RundeckLogFormat()
@@ -98,7 +102,7 @@ class LogFileStorageService
     def grailsLinkGenerator
     ApplicationContext applicationContext
     def metricService
-    def configurationService
+    ConfigService configurationService
     def jobStateService
 
     /**
@@ -133,6 +137,143 @@ class LogFileStorageService
      */
     protected ConcurrentHashMap<String, Map> logFileRetrievalRequests = new ConcurrentHashMap<String, Map>()
     protected ConcurrentHashMap<String, Map> logFileRetrievalResults = new ConcurrentHashMap<String, Map>()
+
+    static final SysConfigProp STORAGE_CONCURRENCY_LIMIT = config {
+        key 'rundeck.execution.logs.fileStorage.storageTasks.concurrencyLimit'
+        label 'Storage Concurrency Limit'
+        description 'Max number of concurrent log file storage tasks'
+        datatype 'integer'
+        defaultValue '5'
+    }
+
+    static final SysConfigProp RETRIEVAL_CONCURRENCY_LIMIT = config {
+        key 'rundeck.execution.logs.fileStorage.retrievalTasks.concurrencyLimit'
+        label 'Retrieval Concurrency Limit'
+        description 'Max number of concurrent log file storage tasks'
+        datatype 'integer'
+        defaultValue '5'
+    }
+
+    static final SysConfigProp RESUME_INCOMPLETE_STRATEGY = config {
+        key 'rundeck.logFileStorageService.resumeIncomplete.strategy'
+        label 'Resume Incomplete Strategy'
+        description 'Strategy for resuming incomplete requests'
+        datatype 'String'
+        defaultValue 'periodic'
+    }
+
+    static final SysConfigProp STORAGE_RETRY_COUNT = config {
+        key 'rundeck.execution.logs.fileStorage.storageRetryCount'
+        label 'Max Storage Retry Count'
+        description 'Max number of times to try storage requests'
+        datatype 'integer'
+        defaultValue '1'
+    }
+
+    static final SysConfigProp STORAGE_RETRY_DELAY = config {
+        key 'rundeck.execution.logs.fileStorage.storageRetryDelay'
+        label 'Storage Retry Delay'
+        description 'Delay between retries, in seconds'
+        datatype 'integer'
+        defaultValue '60'
+    }
+
+    static final SysConfigProp CANCEL_ON_STORAGE_FAILURE = config {
+        key 'rundeck.execution.logs.fileStorage.cancelOnStorageFailure'
+        label 'Cancel on storage failure'
+        description 'Whether to cancel (delete) storage requests after maximum attempts have been reached'
+        datatype 'boolean'
+        defaultValue 'true'
+    }
+
+    static final SysConfigProp RETRIEVAL_RETRY_COUNT = config {
+        key 'rundeck.execution.logs.fileStorage.retrievalRetryCount'
+        label 'Max Retrieval Retry Count'
+        description 'Max number of times to try retrieval requests'
+        datatype 'integer'
+        defaultValue '3'
+    }
+
+    static final SysConfigProp RETRIEVAL_RETRY_DELAY = config {
+        key 'rundeck.execution.logs.fileStorage.retrievalRetryDelay'
+        label 'Retrieval Retry Delay'
+        description 'Delay between retrieval retry attempts, in seconds'
+        datatype 'integer'
+        defaultValue '60'
+    }
+
+    static final SysConfigProp REMOTE_PENDING_DELAY = config {
+        key 'rundeck.execution.logs.fileStorage.remotePendingDelay'
+        label 'Remote Pending Delay'
+        description 'Delay after execution completion before log file is available considered to be in PENDING state, in seconds'
+        datatype 'integer'
+        defaultValue '120'
+    }
+
+    static final SysConfigProp CHECKPOINT_TIME_INTERVAL = config {
+        key 'rundeck.execution.logs.fileStorage.checkpoint.time.interval'
+        label 'Checkpoint Time Interval'
+        description 'Time interval between checkpoint storage requests'
+        datatype 'String'
+        defaultValue '30s'
+    }
+
+    static final SysConfigProp CHECKPOINT_TIME_MINIMUM = config {
+        key 'rundeck.execution.logs.fileStorage.checkpoint.time.minimum'
+        label 'Checkpoint Time Minimum'
+        description 'Minimum time interval to wait between checkpoint storage requests'
+        datatype 'String'
+        defaultValue '30s'
+    }
+    static final SysConfigProp CHECKPOINT_FILESIZE_MINIMUM = config {
+        key 'rundeck.execution.logs.fileStorage.checkpoint.fileSize.minimum'
+        label 'Checkpoint Filesize Minimum'
+        description 'Minimum file size before first checkpoint storage requests, in file size string in the form \'###[tgkm][b]\''
+        datatype 'String'
+        defaultValue '0'
+    }
+
+    static final SysConfigProp CHECKPOINT_FILESIZE_INCREMENT = config {
+        key 'rundeck.execution.logs.fileStorage.checkpoint.fileSize.increment'
+        label 'Checkpoint Filesize Increment'
+        description 'Minimum file size change between checkpoint storage requests, in file size string in the form \'###[tgkm][b]\''
+        datatype 'String'
+        defaultValue '0'
+    }
+
+    static final SysConfigProp FILE_STORAGE_PLUGIN = config {
+        key 'rundeck.execution.logs.fileStoragePlugin'
+        label 'File Storage Plugin'
+        description 'Provider name of a LogFileStorage plugin'
+        datatype 'String'
+    }
+    static final SysConfigProp STARTUP_RESUMEMODE = config {
+        key 'rundeck.logFileStorageService.startup.resumeMode'
+        label 'Log File Storage Startup Resume Incomplete Mode'
+        description 'Optional mode for resuming incomplete log file storage at startup: sync, async. If unset it will not be resumed.'
+        datatype 'String'
+        restart true
+    }
+
+    List<SysConfigProp> systemConfigProps = Collections.unmodifiableList([
+        STORAGE_CONCURRENCY_LIMIT,
+        RETRIEVAL_CONCURRENCY_LIMIT,
+        RESUME_INCOMPLETE_STRATEGY,
+        STORAGE_RETRY_COUNT,
+        STORAGE_RETRY_DELAY,
+        CANCEL_ON_STORAGE_FAILURE,
+        RETRIEVAL_RETRY_COUNT,
+        RETRIEVAL_RETRY_DELAY,
+        REMOTE_PENDING_DELAY,
+        CHECKPOINT_TIME_INTERVAL,
+        CHECKPOINT_TIME_MINIMUM,
+        CHECKPOINT_FILESIZE_MINIMUM,
+        CHECKPOINT_FILESIZE_INCREMENT,
+        FILE_STORAGE_PLUGIN,
+        STARTUP_RESUMEMODE
+    ])
+
+
     @Override
     void afterPropertiesSet() throws Exception {
         def pluginName = getConfiguredPluginName()
@@ -141,8 +282,8 @@ class LogFileStorageService
             return
         }
 
-        logFileStorageTaskExecutor.concurrencyLimit = 1 + configurationService.getInteger('execution.logs.fileStorage.storageTasks.concurrencyLimit', 5)
-        logFileTaskExecutor.concurrencyLimit = 1 + configurationService.getInteger('execution.logs.fileStorage.retrievalTasks.concurrencyLimit', 5)
+        logFileStorageTaskExecutor.concurrencyLimit = 1 + configurationService.getInteger(STORAGE_CONCURRENCY_LIMIT, 5)
+        logFileTaskExecutor.concurrencyLimit = 1 + configurationService.getInteger(RETRIEVAL_CONCURRENCY_LIMIT, 5)
 
         log.debug("logFileStorageTaskExecutor concurrency: ${logFileStorageTaskExecutor.concurrencyLimit}")
         log.debug("logFileTaskExecutor concurrency: ${logFileTaskExecutor.concurrencyLimit}")
@@ -171,6 +312,20 @@ class LogFileStorageService
         }
     }
 
+    static SystemConfig.SystemConfigBuilder configDefaults(SystemConfig.SystemConfigBuilder builder) {
+        builder.with {
+            authRequired 'ops_admin'
+            category 'Log File Storage'
+            visibility 'Standard'
+        }
+    }
+    static SysConfigProp config(@DelegatesTo(SystemConfig.SystemConfigBuilder) Closure clos){
+        def builder = configDefaults(SystemConfig.builder())
+        clos.delegate=builder
+        clos.call()
+        return builder.build()
+    }
+
     void cleanup() {
         logFileStorageTaskScheduler.shutdown()
     }
@@ -194,7 +349,7 @@ class LogFileStorageService
         )
     }
     private String getConfiguredResumeStrategy() {
-        configurationService?.getString("logFileStorageService.resumeIncomplete.strategy", "periodic")?:'periodic'
+        configurationService?.getString(RESUME_INCOMPLETE_STRATEGY, "periodic")?:'periodic'
     }
 
     Counter getStorageQueueCounter(){
@@ -442,7 +597,7 @@ class LogFileStorageService
      * @return
      */
     int getConfiguredStorageRetryCount() {
-        def count = configurationService.getInteger("execution.logs.fileStorage.storageRetryCount",0)
+        def count = configurationService.getInteger(STORAGE_RETRY_COUNT,0)
         count > 0 ? count : 1
     }
     /**
@@ -450,21 +605,21 @@ class LogFileStorageService
      * @return
      */
     int getConfiguredStorageRetryDelay() {
-        def delay = configurationService.getInteger("execution.logs.fileStorage.storageRetryDelay",0)
+        def delay = configurationService.getInteger(STORAGE_RETRY_DELAY,0)
         delay > 0 ? delay : 60
     }
     /**
      * @return whether storage failure should cancel storage request completely
      */
     boolean getConfiguredStorageFailureCancel() {
-        configurationService.getBoolean("execution.logs.fileStorage.cancelOnStorageFailure", true)
+        configurationService.getBoolean(CANCEL_ON_STORAGE_FAILURE, true)
     }
     /**
      * Return the configured retry count
      * @return
      */
     int getConfiguredRetrievalRetryCount() {
-        def count = configurationService.getInteger("execution.logs.fileStorage.retrievalRetryCount",0)
+        def count = configurationService.getInteger(RETRIEVAL_RETRY_COUNT,0)
         count > 0 ? count : 3
     }
     /**
@@ -472,7 +627,7 @@ class LogFileStorageService
      * @return
      */
     int getConfiguredRetrievalRetryDelay() {
-        def delay = configurationService.getInteger("execution.logs.fileStorage.retrievalRetryDelay",0)
+        def delay = configurationService.getInteger(RETRIEVAL_RETRY_DELAY,0)
         delay > 0 ? delay : 60
     }
     /**
@@ -480,13 +635,13 @@ class LogFileStorageService
      * @return
      */
     int getConfiguredRemotePendingDelay() {
-        def delay = configurationService.getInteger("execution.logs.fileStorage.remotePendingDelay",0)
+        def delay = configurationService.getInteger(REMOTE_PENDING_DELAY,0)
         delay > 0 ? delay : 120
     }
 
     def int getLogstoreCheckpointTimeSecondsPeriod() {
         configurationService.getTimeDuration(
-                'execution.logs.fileStorage.checkpoint.time.interval',
+                CHECKPOINT_TIME_INTERVAL,
                 '30s',
                 TimeUnit.SECONDS
         )
@@ -494,25 +649,25 @@ class LogFileStorageService
 
     def int getLogstoreCheckpointTimeSecondsMinimum() {
         configurationService.getTimeDuration(
-                'execution.logs.fileStorage.checkpoint.time.minimum',
+            CHECKPOINT_TIME_MINIMUM,
                 '30s',
                 TimeUnit.SECONDS
         )
     }
 
     def long getLogstoreCheckpointFilesizeMinimum() {
-        configurationService.getFileSize('execution.logs.fileStorage.checkpoint.fileSize.minimum', 0)
+        configurationService.getFileSize(CHECKPOINT_FILESIZE_MINIMUM, 0)
     }
 
     def long getLogstoreCheckpointFilesizeIncrement() {
-        configurationService.getFileSize('execution.logs.fileStorage.checkpoint.fileSize.increment', 0)
+        configurationService.getFileSize(CHECKPOINT_FILESIZE_INCREMENT, 0)
     }
     /**
      * Return the configured plugin name
      * @return
      */
     String getConfiguredPluginName() {
-        configurationService?.getString('execution.logs.fileStoragePlugin',null)
+        configurationService?.getString(FILE_STORAGE_PLUGIN,null)
     }
     /**
      * Create a streaming log writer for the given execution.
