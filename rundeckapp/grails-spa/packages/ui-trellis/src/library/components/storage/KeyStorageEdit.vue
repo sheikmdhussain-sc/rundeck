@@ -63,7 +63,7 @@
         <div class="col-sm-9">
           <div class="input-group">
             <div class="input-group-addon">
-              <span>{{this.rootPath}}</span>
+              <span>{{rootPath}}</span>
             </div>
             <input v-model="uploadSetting.inputPath" :disabled="uploadSetting.modifyMode===true"
                    id="uploadResourcePath2" name="relativePath" class="form-control"
@@ -116,7 +116,7 @@
     </div>
   </div>
 
-  <div slot="footer">
+  <div>
     <div class="text-right">
       <button type="button" class="btn btn-default mr-3" @click="handleCancel">Cancel</button>
       <button type="button" class="btn btn-cta" :disabled="validInput()===false"
@@ -130,12 +130,12 @@
 
 <script lang="ts">
 import {getRundeckContext} from "../../index"
-import KeyType from "./KeyType"
-import InputType from "./InputType"
-import Vue from "vue"
+import {defineComponent} from "vue"
 import type { PropType } from 'vue'
+import InputType from "../../types/InputType";
+import KeyType from "../../types/KeyType";
 
-interface UploadSetting {
+export interface UploadSetting {
   modifyMode: boolean,
   keyType: KeyType,
   inputPath: String,
@@ -150,14 +150,15 @@ interface UploadSetting {
   dontOverwrite: boolean
 }
 
-export default Vue.extend({
+export default defineComponent({
   name: "KeyStorageEdit",
   props: {
     storageFilter: String,
-    uploadSetting: {} as PropType<UploadSetting>,
+    uploadSetting: Object as PropType<UploadSetting>,
     project: String,
     rootPath: String
   },
+  emits: ['cancelEditing', 'finishEditing', 'keyCreated'],
   data() {
     return {
       modalEdit: false,
@@ -306,6 +307,7 @@ export default Vue.extend({
 
         if (result.resources != null) {
           result.resources.forEach((resource: any) => {
+            if(!resource) return
             if (resource.type === 'directory') {
               this.directories.push(resource);
 

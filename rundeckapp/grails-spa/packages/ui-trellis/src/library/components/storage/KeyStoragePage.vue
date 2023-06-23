@@ -9,11 +9,11 @@
 
 <script lang="ts">
 import KeyStorageView from "./KeyStorageView.vue";
-import KeyStorageEdit from "./KeyStorageEdit.vue";
-import Vue from "vue";
+import KeyStorageEdit, { UploadSetting } from "./KeyStorageEdit.vue";
+import {defineComponent} from "vue";
 import { getRundeckContext } from "../../index"
 
-export default Vue.extend({
+export default defineComponent({
   name: "KeyStoragePage",
   components: { KeyStorageEdit, KeyStorageView },
   props: [
@@ -25,10 +25,10 @@ export default Vue.extend({
   ],
   data() {
     return {
-      bus: new Vue(),
+      bus: window._rundeck.eventBus,
       modalEdit: false,
       path: '',
-      uploadSetting: {},
+      uploadSetting: {} as UploadSetting,
       ready: false,
       selectedKey: {}
     }
@@ -42,7 +42,7 @@ export default Vue.extend({
     handleCancelEditing() {
       this.modalEdit = false
     },
-    openEditor(uploadSetting: {}) {
+    openEditor(uploadSetting: UploadSetting) {
       this.uploadSetting = uploadSetting
       this.modalEdit = true
     },

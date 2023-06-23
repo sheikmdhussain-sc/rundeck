@@ -28,8 +28,10 @@
 
       >
       <slot name="titlePrefix"></slot>
-      <span slot="suffix"><slot name="titleSuffix"></slot></span>
-      </pluginInfo>
+      <template v-slot:suffix>
+        <slot name="titleSuffix"></slot>
+      </template>
+    </pluginInfo>
 
     <div class="row" v-if="!isTitleMode">
       <div v-if="inputShowIcon||inputShowTitle || inputShowDescription" class="col-xs-12 col-sm-12">
@@ -77,6 +79,7 @@
                                         :rkey="'g_'+gindex+'_'+rkey"
                                         :readOnly="readOnly"
                                         :pindex="pindex"
+                                        :selector-data="propsComputedSelectorData"
                                         :autocompleteCallback="autocompleteCallback"/>
                   </div>
 
@@ -110,6 +113,7 @@
                                         :readOnly="readOnly"
                                         :rkey="'g_'+gindex+'_'+rkey"
                                         :pindex="pindex"
+                                        :selector-data="propsComputedSelectorData"
                                         :autocompleteCallback="autocompleteCallback"/>
                   </div>
               </div>
@@ -127,7 +131,7 @@
 }
 </style>
 <script lang="ts">
-import Vue from 'vue'
+import { defineComponent } from 'vue'
 
 import AceEditor from '../utils/AceEditor.vue'
 import Expandable from '../utils/Expandable.vue'
@@ -149,7 +153,7 @@ interface PropGroup{
   props:any[],
 }
 
-export default Vue.extend({
+export default defineComponent({
   name: 'PluginConfig',
   components: {
     Expandable,
@@ -166,7 +170,7 @@ export default Vue.extend({
     'showTitle',
     'showIcon',
     'showDescription',
-    'value',
+    'modelValue',
     'savedProps',
     'pluginConfig',
     'validation',
@@ -177,6 +181,7 @@ export default Vue.extend({
     'contextAutocomplete',
     'autocompleteCallback'
   ],
+  emits: ['update:modelValue','change','handleAutocomplete','hasKeyStorageAccess'],
   data () {
     return {
       props: [] as any[],
@@ -198,7 +203,7 @@ export default Vue.extend({
   },
   methods: {
     setVal(target: any, prop: any, val: any) {
-      Vue.set(target, prop, val)
+      target[prop] = val
     },
     prepareInputs () {
       if (!this.isShowConfigForm) {
@@ -209,35 +214,35 @@ export default Vue.extend({
       if (typeof this.inputSavedProps !== 'undefined' && this.inputSavedProps.length > 0) {
         for (const i of this.inputSavedProps) {
           if (typeof this.inputSaved[i] === 'undefined') {
-            this.inputSaved[i] = this.value[i]
+            this.inputSaved[i] = this.modelValue[i]
           }
         }
       }
 
-      const config = this.value.config
+      const config = this.modelValue.config
 
       const modeCreate = this.isCreateMode
 
       // set up defaults and convert Options to array
       this.props.forEach((prop: any) => {
         if (config[prop.name]) {
-          Vue.set(this.inputValues, prop.name, config[prop.name])
+          this.inputValues[prop.name] = config[prop.name]
         }
         if (modeCreate && !this.inputValues[prop.name] && prop.defaultValue) {
-          Vue.set(this.inputValues, prop.name, prop.defaultValue)
+          this.inputValues[prop.name] = prop.defaultValue
         }
         if (prop.type === 'Options' && typeof this.inputValues[prop.name] === 'string') {
           // convert to array
-          Vue.set(this.inputValues, prop.name, this.inputValues[prop.name].split(/, */))
+          this.inputValues[prop.name] = this.inputValues[prop.name].split(/, */)
         } else if (prop.type === 'Options' && typeof this.inputValues[prop.name] === 'undefined') {
           // convert to array
-          Vue.set(this.inputValues, prop.name, [])
+          this.inputValues[prop.name] = []
         } else if (prop.type === 'Select' && typeof this.inputValues[prop.name] === 'undefined') {
           // select box should use blank string to preselect disabled option
-          Vue.set(this.inputValues, prop.name, '')
+          this.inputValues[prop.name] = ''
         } else if (prop.type === 'Boolean' && typeof this.inputValues[prop.name] === 'string') {
           // boolean should convert to boolean
-          Vue.set(this.inputValues, prop.name, this.inputValues[prop.name]==='true')
+          this.inputValues[prop.name] = this.inputValues[prop.name]==='true'
         }
         if(prop.options &&( prop.options['groupName']||prop.options['grouping'])){
           const gname=prop.options['groupName']||'-'
@@ -268,9 +273,9 @@ export default Vue.extend({
       if (prop.options && prop.options['selectionAccessor'] === 'PLUGIN_TYPE') {
         const serviceName = prop.options['selectionAdditional']
         getPluginProvidersForService(serviceName).then((data: any) => {
-          Vue.set(this.propsComputedSelectorData, prop.name, data.descriptions.map((provider: any) => {
+          this.propsComputedSelectorData[prop.name] = data.descriptions.map((provider: any) => {
             return {key: provider.title, value: provider.name, description: provider.description}
-          }))
+          })
         })
       }
     },
@@ -370,8 +375,8 @@ export default Vue.extend({
     loadForMode(){
       if (this.serviceName && this.provider) {
         this.loadProvider(this.provider)
-      } else if (this.isShowConfigForm && this.serviceName && this.value && this.value.type) {
-        this.loadProvider(this.value.type)
+      } else if (this.isShowConfigForm && this.serviceName && this.modelValue && this.modelValue.type) {
+        this.loadProvider(this.modelValue.type)
       } else if (this.pluginConfig) {
         this.loadPluginData(this.pluginConfig)
       }
@@ -381,7 +386,7 @@ export default Vue.extend({
     inputValues: {
       handler (newValue, oldValue) {
         if (this.isShowConfigForm) {
-          this.$emit('input', Object.assign({}, this.inputSaved, {config: this.exportedValues}))
+          this.$emit('update:modelValue', Object.assign({}, this.inputSaved, {config: this.exportedValues}))
         }
       },
       deep: true
@@ -420,7 +425,7 @@ export default Vue.extend({
       this.props.forEach((prop: any) => {
         visibility[prop.name] = this.isPropVisible(prop) && this.isPropInScope(prop)
         if (!visibility[prop.name]) {
-          Vue.delete(visibility, prop.name)
+          delete visibility[prop.name]
         }
       })
       return visibility
@@ -467,12 +472,12 @@ export default Vue.extend({
       return convertArrayInput(cleanConfigInput(this.exportInputs()))
     },
     computedConfig(): any {
-        if(this.value){
-            return Object.assign({}, this.value.config || {})
+        if(this.modelValue){
+            return Object.assign({}, this.modelValue.config || {})
         }else{
             return null
         }
-    }
+    },
   },
   beforeMount () {
     this.loadForMode()

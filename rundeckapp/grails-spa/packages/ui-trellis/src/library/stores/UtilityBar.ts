@@ -1,16 +1,14 @@
 import {RootStore} from './RootStore'
 import {RundeckClient} from '@rundeck/client'
-import { action, computed, observable } from 'mobx'
-import { VueConstructor } from 'vue'
 
 export class UtilityBar {
-    @observable items: Array<UtilityItem> = []
+    items: Array<UtilityItem> = []
 
-    @observable overflow: Array<UtilityItem> = []
+    overflow: Array<UtilityItem> = []
 
     constructor(readonly root: RootStore, readonly client: RundeckClient) {
         if (window._rundeck.navbar) {
-            window._rundeck.navbar.items.forEach(i => {
+            window._rundeck.navbar.items.forEach((i: UtilityItem) => {
                 this.items.push({...i, visible: true, container: i.container || 'root'})
             })
         }
@@ -63,6 +61,7 @@ export interface UtilityItem {
     group?: string
     visible: boolean
     count?: number
+    type: string
 }
 
 export interface UtilityActionItem extends UtilityItem {
@@ -72,5 +71,5 @@ export interface UtilityActionItem extends UtilityItem {
 
 export interface UtilityWidgetItem extends UtilityItem {
     type: 'widget'
-    widget: VueConstructor
+    widget: Object
 }
