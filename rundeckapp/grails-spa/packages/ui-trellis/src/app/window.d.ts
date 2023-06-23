@@ -1,9 +1,9 @@
-import {RundeckContext} from '@/library'
-import {AppLinks} from "../library";
+import type {AppLinks, RundeckContext} from '@/library'
 
 declare global {
     interface Window {
         _rundeck: RundeckContext
         appLinks: AppLinks
+        Messages: any
     }
 }

@@ -20,8 +20,7 @@
  <meta name="tabpage" content="configure"/>
  <meta name="tabtitle" content="${g.message(code:'page.users.title')}"/>
  <title><g:message code="page.users.title"/></title>
-<asset:javascript src="static/pages/user-summary.js" defer="defer"/>
-<asset:stylesheet href="static/css/pages/user-summary.css" />
+    <g:loadEntryAssets entry="pages/menu" />
 </head>
 
 <body>

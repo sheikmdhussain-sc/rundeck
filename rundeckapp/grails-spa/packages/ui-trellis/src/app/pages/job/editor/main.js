@@ -14,6 +14,7 @@ import {
 } from '../../../../library/utilities/vueEventBus'
 import {initI18n} from "../../../utilities/i18n"
 
+const init = () => {
 let locale = window._rundeck.locale || 'en_US'
 moment.locale(locale)
 
@@ -74,3 +75,5 @@ for (let i = 0; i < scsels.length; i++) {
     oapp.mount(e)
   }
 }
+}
+window.addEventListener('DOMContentLoaded', init)

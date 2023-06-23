@@ -34,8 +34,7 @@
           kind: AuthConstants.TYPE_EVENT
   )}"/>
 
-    <asset:javascript src="static/css/pages/command.css"/>
-    <asset:javascript src="static/pages/command.js"/>
+    <g:loadEntryAssets entry="pages/command"  />
     <asset:javascript src="executionState.js"/>
     <asset:javascript src="executionControl.js"/>
     <asset:javascript src="util/yellowfade.js"/>
@@ -110,7 +109,7 @@ search
 }
 })
   </g:javascript>
-  <asset:javascript src="static/pages/project-activity.js" defer="defer"/>
+  <g:loadEntryAssets entry="pages/project-activity"/>
 </head>
 <body>
 <user:getNodeFilters user="${session.user}">

@@ -104,7 +104,7 @@
     </div>
 
   </div>
-  <asset:javascript src="static/pages/project-dashboard.js"/>
+    <g:loadEntryAssets entry="pages/project-dashboard" />
 </div>
 </div>
 </body>

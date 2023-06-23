@@ -51,6 +51,7 @@
         </div>
         <ui-socket section="execution-log-viewer" location="settings"
                    :event-bus="eventBus"
+                   :root-store="rootStore"
         />
       </form>
     </RdDrawer>
@@ -108,6 +109,7 @@ import UiSocket from "../utils/UiSocket.vue";
 import { EventBus } from '../../utilities/vueEventBus'
 import { Btn, BtnGroup, ProgressBar } from 'uiv'
 import {PropType} from "vue";
+import { RootStore } from '../../stores/RootStore'
 
 const CONFIG_STORAGE_KEY='execution-viewer'
 
@@ -186,11 +188,14 @@ export default defineComponent({
             required: false,
             default: true
         },
+        rootStore: {
+          type: Object as PropType<RootStore>,
+          required: true
+        },
     },
     data() {
         return {
             logviewerui,
-            rootStore: window._rundeck.rootStore,
             eventBus : window._rundeck.eventBus as typeof EventBus,
             themes : [
                 {label: 'Rundeck Theme', value: 'rundeck'},

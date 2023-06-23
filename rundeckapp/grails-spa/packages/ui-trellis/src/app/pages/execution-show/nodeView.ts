@@ -6,8 +6,9 @@ import LogViewer from '../../../library/components/execution-log/logViewer.vue'
 import { getRundeckContext } from '../../../library'
 import * as uiv from 'uiv'
 
-const rootStore = getRundeckContext().rootStore
 
+window.addEventListener('DOMContentLoaded', () => {
+    const rootStore = getRundeckContext().rootStore
 window._rundeck.eventBus.on('ko-exec-show-output', (nodeStep: any) => {
     const execId = nodeStep.flow.executionId()
     const stepCtx = nodeStep.stepctx
@@ -31,6 +32,7 @@ window._rundeck.eventBus.on('ko-exec-show-output', (nodeStep: any) => {
         :showSettings="false"
         ref="viewer"
         :config="config"
+        :root-store="rootStore"
     />
     `
 
@@ -40,6 +42,11 @@ window._rundeck.eventBus.on('ko-exec-show-output', (nodeStep: any) => {
         template: template,
         provide: {
             rootStore
+        },
+        data() {
+            return {
+                rootStore
+            }
         },
         props: {
             config: {default: () => ({
@@ -74,4 +81,5 @@ window._rundeck.eventBus.on('ko-exec-show-output', (nodeStep: any) => {
         reaction.dispose()
         nodeStep.outputLineCount(1)
     })
+})
 })

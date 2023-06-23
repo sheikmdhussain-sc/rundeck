@@ -98,7 +98,7 @@ search
         }
     })
     </g:javascript>
-    <asset:javascript src="static/pages/project-activity.js" defer="defer"/>
+    <g:loadEntryAssets entry="pages/project-activity" />
 </head>
 <body>
 <div class="content">

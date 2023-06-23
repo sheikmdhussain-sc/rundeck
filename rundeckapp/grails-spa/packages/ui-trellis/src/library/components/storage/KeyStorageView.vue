@@ -62,7 +62,7 @@
 
       <div class="loading-area text-info " v-if="loading" style="width: 100%; height: 200px; padding: 50px; background-color: #eee;">
         <i class="glyphicon glyphicon-time"></i>
-        {{ "Loading..." }}
+        {{$t('loading.text')}}
       </div>
       <table class="table table-hover table-condensed" v-else>
         <tbody>
@@ -208,6 +208,7 @@
 import moment from 'moment'
 import {getRundeckContext} from "../../index"
 import {defineComponent} from "vue"
+
 import KeyType from "../../types/KeyType";
 import InputType from "../../types/InputType";
 import { formatHumanizedDuration, formatKeyStorageDate } from "../../utilities/DateTimeFormatters";

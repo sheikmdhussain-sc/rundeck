@@ -49,7 +49,7 @@
                     </div>
                 </div>
             </div>
-            <ui-socket section="edit-project-node-source-file" location="editor">
+            <ui-socket section="edit-project-node-source-file" location="editor" :root-store="rootStore">
                 <ace-editor :soft-wrap-control="true"
                             :lang="fileFormat"
                             height="500"
@@ -91,9 +91,10 @@ import PluginConfig from '../../../library/components/plugins/pluginConfig.vue'
 import AceEditor from '../../../library/components/utils/AceEditor.vue'
 import UiSocket from '../../../library/components/utils/UiSocket.vue'
 import PageConfirm from '../../../library/components/utils/PageConfirm.vue'
-import {EventBus} from "../../../library";
+import {EventBus, getRundeckContext} from "../../../library";
 
 export default defineComponent({
+  name: 'EditProjectNodeSourceFile',
   components: {PluginConfig, AceEditor, UiSocket, PageConfirm},
   props: {
     eventBus: {type: Object as PropType<typeof EventBus>, required: true},
@@ -114,7 +115,10 @@ export default defineComponent({
   computed: {
     fileEmpty() {
       return !this.value
-    }
+    },
+    rootStore() {
+      return getRundeckContext().rootStore
+    },
   },
   watch: {
     value(newVal) {

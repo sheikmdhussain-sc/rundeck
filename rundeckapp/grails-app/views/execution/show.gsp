@@ -172,11 +172,9 @@ search
     }
 })
       </g:javascript>
-      <asset:javascript src="static/pages/project-activity.js" defer="defer"/>
+      <g:loadEntryAssets entry="pages/project-activity" />
 
-      <asset:stylesheet href="static/css/chunk-vendors.css"/>
-      <asset:stylesheet href="static/css/pages/execution-show.css"/>
-      <asset:javascript src="static/pages/execution-show.js" defer="defer"/>
+      <g:loadEntryAssets entry="pages/execution-show" />
   </head>
   <g:set var="isAdhoc" value="${!scheduledExecution && execution.workflow.commands.size() == 1}"/>
   <body id="executionShowPage">

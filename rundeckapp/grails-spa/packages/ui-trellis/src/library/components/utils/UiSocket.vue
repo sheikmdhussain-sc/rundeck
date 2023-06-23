@@ -19,6 +19,7 @@ import {
 } from '../../rundeckService'
 import {UIItem, UIWatcher} from '../../stores/UIStore'
 import {EventBus} from "../../utilities/vueEventBus"
+import {RootStore} from "../../stores/RootStore"
 
 
 export default defineComponent({
@@ -40,6 +41,10 @@ export default defineComponent({
       type: Object,
       required: false,
     },
+    rootStore: {
+      type: Object as PropType<RootStore>,
+      required: true,
+    },
   },
   setup() {
     const items = ref<UIItem[]>([])
@@ -47,14 +52,13 @@ export default defineComponent({
     const rootStore = getRundeckContext().rootStore
     return {
       items,
-      uiwatcher,
-      rootStore,
+      uiwatcher
     }
   },
   computed: {
-    itemData() {
-      if (typeof this.socketData === 'string') {
-        try {
+    itemData(){
+      if(typeof this.socketData === 'string'){
+        try{
           return JSON.parse(this.socketData)
         } catch (e) {
           return this.socketData
